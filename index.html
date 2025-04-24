@@ -215,22 +215,21 @@
     name: name
   };
 
-  // 🔁 Use CORS proxy
+  // ✅ Use corsproxy.io to bypass Google Apps Script's CORS block
   const proxyUrl = "https://corsproxy.io/?";
-  const url = proxyUrl + encodeURIComponent(DRIVE_UPLOAD_URL);
+  const scriptUrl = 'https://script.google.com/macros/s/AKfycby1eepW4cUzuvWjM_r61A848NLQmXI9PumEW0j6mxdPQgAmLelaQOZolrKkB83cx_b0/exec';
+  const url = proxyUrl + encodeURIComponent(scriptUrl);
 
   fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify(payload)
   })
-  .then(res => res.json())
+  .then(res => res.text()) // cannot .json() because proxy returns as text
   .then(data => {
-    if (data.status === 'success') {
-      alert('✅ Upload successful!');
-    } else {
-      alert('❌ Upload error: ' + data.message);
-    }
+    alert('✅ Upload result:\n' + data);
   })
   .catch(err => {
     alert('❌ Upload failed: ' + err.message);
