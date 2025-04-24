@@ -229,18 +229,28 @@
     }
 
     // Upload via CORS proxy and handle JSON response
-    function uploadToDrive() {
-      const name=document.getElementById('userNameInput').value.trim();
-      if(!name){alert('Please enter your name'); return;}
-      const ts=new Date().toISOString().replace(/[:.]/g,'-').replace(/T/,'_').replace(/Z$/,'');
-      const filename=`${name}_${ts}.png`;
-      console.log('Uploading with filename:',filename);
-      const payload={ image: warped.toDataURL('image/png'), filename };
-      fetch('https://cors-proxy-uploader.onrender.com/upload',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
-        .then(res=>{ if(!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
-        .then(data=>{ console.log('Full response:',data); const id=data.id||data.fileId||data.file_id||'unknown'; alert(`✅ Uploaded! File ID: ${id}`); })
-        .catch(err=>{ alert('❌ Upload failed: '+err.message); console.error(err); });
-    }
+    fetch('https://cors-proxy-uploader.onrender.com/upload', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+})
+.then(res => res.text()) // <-- force as text
+.then(text => {
+  console.log('⚠️ Raw response from proxy:', text);
+  try {
+    const data = JSON.parse(text);
+    console.log('✅ Parsed:', data);
+    const id = data.id || data.fileId || data.file_id || 'unknown';
+    alert(`✅ Uploaded! File ID: ${id}`);
+  } catch (err) {
+    console.error('❌ Failed to parse JSON:', err);
+    alert('❌ Invalid JSON from proxy.');
+  }
+})
+.catch(err => {
+  console.error('❌ Upload failed:', err);
+  alert('❌ Upload failed: ' + err.message);
+});
 
     document.getElementById('uploadBtn').addEventListener('click',uploadToDrive);
   </script>
