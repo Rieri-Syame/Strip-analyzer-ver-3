@@ -203,7 +203,23 @@
     name: name
   };
 
-  fetch(DRIVE_UPLOAD_URL, {
+  function uploadToDrive() {
+  const name = document.getElementById('userNameInput').value.trim();
+  if (!name) {
+    alert('Please enter your name');
+    return;
+  }
+
+  const payload = {
+    image: warped.toDataURL('image/png'),
+    name: name
+  };
+
+  // 🔁 Use CORS proxy
+  const proxyUrl = "https://corsproxy.io/?";
+  const url = proxyUrl + encodeURIComponent(DRIVE_UPLOAD_URL);
+
+  fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
