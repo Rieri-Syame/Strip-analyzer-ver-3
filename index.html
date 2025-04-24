@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Strip Analyzer</title>
-  <script async src="opencv.js"></script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" onerror="document.getElementById('loading').textContent = '❌ Failed to load OpenCV.js';"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .tabs { display:flex; border-bottom:1px solid #ccc; margin-bottom:10px; list-style:none; padding:0; }
@@ -54,26 +54,6 @@
   </div>
 
   <script>
-    const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycby1eepW4cUzuvWjM_r61A848NLQmXI9PumEW0j6mxdPQgAmLelaQOZolrKkB83cx_b0/exec';
-
-    // Tabs
-    document.querySelectorAll('.tabs li').forEach(tab => {
-      tab.onclick = () => {
-        document.querySelectorAll('.tabs li').forEach(t=>t.classList.remove('active'));
-        tab.classList.add('active');
-        const tgt = tab.dataset.tab;
-        document.querySelectorAll('.tab-content > div')
-          .forEach(div=>div.classList.toggle('active', div.id===tgt));
-      };
-    });
-
-    // Restore saved image
-    document.addEventListener('DOMContentLoaded', ()=>{
-      const d = localStorage.getItem('lastAnalyzedImage');
-      if(d) document.getElementById('saved-image-container').innerHTML = `<img src="${d}">`;
-    });
-
-    // Reference palettes...
     const references = {
       glucose:[{hex:'#7dcff4',label:'Negative'},{hex:'#67b492',label:'+/-100'},{hex:'#6ba864',label:'+250'},{hex:'#7c7d39',label:'++500'},{hex:'#654224',label:'+++1000'}],
       protein:[{hex:'#f4ee63',label:'Negative'},{hex:'#e7e785',label:'Trace'},{hex:'#dce480',label:'+30'},{hex:'#b4cf80',label:'++100'},{hex:'#a2ca95',label:'+++300'},{hex:'#78b289',label:'++++1000'}],
@@ -88,83 +68,97 @@
     const loading = document.getElementById('loading');
     const uploadBtn = document.getElementById('uploadBtn');
 
-    function onOpenCvReady(){
-      loading.textContent='OpenCV.js loaded.';
-      input.disabled=false;
-      uploadBtn.disabled=false;
+    function onOpenCvReady() {
+      loading.textContent = 'OpenCV.js loaded.';
+      input.disabled = false;
+      uploadBtn.disabled = false;
     }
-    (function waitForCV(){
-      if(window.cv&&cv.Mat) onOpenCvReady();
-      else setTimeout(waitForCV,100);
-    })();
 
-    input.onchange = ()=>{
+    document.querySelectorAll('.tabs li').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tabs li').forEach(t=>t.classList.remove('active'));
+        tab.classList.add('active');
+        const tgt = tab.dataset.tab;
+        document.querySelectorAll('.tab-content > div')
+          .forEach(div=>div.classList.toggle('active', div.id===tgt));
+      };
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const d = localStorage.getItem('lastAnalyzedImage');
+      if(d) document.getElementById('saved-image-container').innerHTML = `<img src="${d}">`;
+    });
+
+    input.onchange = () => {
       const file = input.files[0];
       const img = new Image();
-      img.onload = ()=>{
-        canvas.width=img.width; canvas.height=img.height;
-        ctx.drawImage(img,0,0);
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
         detectAndWarp();
       };
-      img.src=URL.createObjectURL(file);
+      img.src = URL.createObjectURL(file);
     };
 
-    function detectAndWarp(){
+    function detectAndWarp() {
       let src = cv.imread(canvas),
           gray = new cv.Mat(),
           thresh = new cv.Mat();
-      cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
-      cv.threshold(gray,thresh,60,255,cv.THRESH_BINARY_INV);
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.threshold(gray, thresh, 60, 255, cv.THRESH_BINARY_INV);
 
-      let contours=new cv.MatVector(),hier=new cv.Mat(), squares=[];
-      cv.findContours(thresh,contours,hier,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE);
-      for(let i=0;i<contours.size();i++){
-        let cnt=contours.get(i),approx=new cv.Mat();
-        cv.approxPolyDP(cnt,approx,0.02*cv.arcLength(cnt,true),true);
-        if(approx.rows===4&&cv.contourArea(approx)>1000){
-          let pts=[];
+      let contours = new cv.MatVector(), hier = new cv.Mat(), squares = [];
+      cv.findContours(thresh, contours, hier, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      for(let i=0; i<contours.size(); i++){
+        let cnt = contours.get(i), approx = new cv.Mat();
+        cv.approxPolyDP(cnt, approx, 0.02*cv.arcLength(cnt,true), true);
+        if(approx.rows === 4 && cv.contourArea(approx) > 1000){
+          let pts = [];
           for(let j=0;j<4;j++) pts.push({x:approx.data32S[2*j],y:approx.data32S[2*j+1]});
-          const cx=pts.reduce((s,p)=>s+p.x,0)/4, cy=pts.reduce((s,p)=>s+p.y,0)/4;
-          squares.push({centroid:{x:cx,y:cy},corners:pts});
+          const cx = pts.reduce((s,p)=>s+p.x,0)/4, cy = pts.reduce((s,p)=>s+p.y,0)/4;
+          squares.push({centroid:{x:cx,y:cy}, corners:pts});
         }
         approx.delete();
       }
-      if(squares.length!==4){
-        loading.textContent='Failed to detect 4 corner markers.';
+      if(squares.length !== 4){
+        loading.textContent = 'Failed to detect 4 corner markers.';
         [src,gray,thresh,contours,hier].forEach(m=>m.delete());
         return;
       }
-      squares.sort((a,b)=>a.centroid.y-b.centroid.y);
-      const top=squares.slice(0,2).sort((a,b)=>a.centroid.x-b.centroid.x),
-            bot=squares.slice(2,4).sort((a,b)=>a.centroid.x-b.centroid.x),
-            pts=[top[0].centroid,top[1].centroid,bot[1].centroid,bot[0].centroid];
-      const dsize=new cv.Size(400,600),
-            srcTri=cv.matFromArray(4,1,cv.CV_32FC2,pts.flatMap(p=>[p.x,p.y])),
-            dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,400,0,400,600,0,600]),
-            M=cv.getPerspectiveTransform(srcTri,dstTri),
-            dst=new cv.Mat();
-      cv.warpPerspective(src,dst,M,dsize);
-      warped.width=400; warped.height=600; cv.imshow(warped,dst);
+      squares.sort((a,b)=>a.centroid.y - b.centroid.y);
+      const top = squares.slice(0,2).sort((a,b)=>a.centroid.x - b.centroid.x),
+            bot = squares.slice(2,4).sort((a,b)=>a.centroid.x - b.centroid.x),
+            pts = [top[0].centroid, top[1].centroid, bot[1].centroid, bot[0].centroid];
+      const dsize = new cv.Size(400,600),
+            srcTri = cv.matFromArray(4,1,cv.CV_32FC2,pts.flatMap(p=>[p.x,p.y])),
+            dstTri = cv.matFromArray(4,1,cv.CV_32FC2,[0,0,400,0,400,600,0,600]),
+            M = cv.getPerspectiveTransform(srcTri, dstTri),
+            dst = new cv.Mat();
+      cv.warpPerspective(src, dst, M, dsize);
+      warped.width = 400;
+      warped.height = 600;
+      cv.imshow(warped, dst);
       [src,gray,thresh,contours,hier,srcTri,dstTri,M,dst].forEach(m=>m.delete());
       analyzePads(warped);
       saveLastImage();
     }
 
-    function analyzePads(cnv){
-      const c=cnv.getContext('2d',{willReadFrequently:true}),
-            W=cnv.width,H=cnv.height,R=8,
-            pos=[0.414,0.468,0.522,0.575],
-            labs=['glucose','protein','nitrite','leukocyte'];
+    function analyzePads(cnv) {
+      const c = cnv.getContext('2d',{willReadFrequently:true}),
+            W = cnv.width, H = cnv.height, R = 8,
+            pos = [0.414,0.468,0.522,0.575],
+            labs = ['glucose','protein','nitrite','leukocyte'];
       labs.forEach((lab,i)=>{
         const x=W/2,y=H*pos[i];
-        c.fillStyle='white';c.beginPath();c.arc(x,y,R,0,2*Math.PI);c.fill();
-        c.strokeStyle='black';c.lineWidth=2;c.stroke();
+        c.fillStyle='white'; c.beginPath(); c.arc(x,y,R,0,2*Math.PI); c.fill();
+        c.strokeStyle='black'; c.lineWidth=2; c.stroke();
         const data=c.getImageData(x-R,y-R,R*2,R*2).data;
         let r=0,g=0,b=0,n=0;
         for(let k=0;k<data.length;k+=4){r+=data[k];g+=data[k+1];b+=data[k+2];n++;}
         const hex='#'+[r/n,g/n,b/n].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
         const res=interpretColor(hex,references[lab]);
-        c.fillStyle='black';c.font='14px sans-serif';
+        c.fillStyle='black'; c.font='14px sans-serif';
         c.fillText(`${lab.charAt(0).toUpperCase()+lab.slice(1)}: ${res}`,5,y+5);
         document.getElementById(`res-${lab}`).textContent=res;
       });
@@ -192,34 +186,36 @@
     }
 
     function uploadToDrive() {
-  const name = document.getElementById('userNameInput').value.trim();
-  if (!name) {
-    alert('Please enter your name');
-    return;
-  }
+      const name = document.getElementById('userNameInput').value.trim();
+      if (!name) {
+        alert('Please enter your name');
+        return;
+      }
 
-  const payload = {
-    image: warped.toDataURL('image/png'),
-    name: name
-  };
+      const payload = {
+        image: warped.toDataURL('image/png'),
+        name: name
+      };
 
-  const proxyUrl = 'https://cors-proxy-uploader.onrender.com/upload'; // Replace with your deployed proxy URL
+      const proxyUrl = 'https://cors-proxy-uploader.onrender.com/upload';
 
-  fetch(proxyUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.text())  // or .json() if your Apps Script sends JSON
-  .then(data => {
-    alert('✅ Upload complete!');
-    console.log('✅ Response from script:', data);
-  })
-  .catch(err => {
-    alert('❌ Upload failed: ' + err.message);
-    console.error('Upload error:', err);
-  });
-}
-document.getElementById('uploadBtn').addEventListener('click', uploadToDrive);
+      fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.text())
+      .then(data => {
+        alert('✅ Upload complete!');
+        console.log('✅ Response from script:', data);
+      })
+      .catch(err => {
+        alert('❌ Upload failed: ' + err.message);
+        console.error('Upload error:', err);
+      });
+    }
+
+    document.getElementById('uploadBtn').addEventListener('click', uploadToDrive);
+  </script>
 </body>
 </html>
