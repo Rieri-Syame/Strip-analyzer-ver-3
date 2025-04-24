@@ -193,12 +193,6 @@
       return bl;
     }
 
-    function saveLastImage() {
-      const d = warped.toDataURL('image/png');
-      document.getElementById('saved-image-container').innerHTML = `<img src="${d}">`;
-      localStorage.setItem('lastAnalyzedImage', d);
-    }
-
     function uploadToDrive() {
     const name = document.getElementById('userNameInput').value.trim();
     if (!name) {
@@ -214,23 +208,29 @@
       .replace(/Z$/, '');
     const filename = `${name}_${ts}.png`;
 
-    // ← Insert the log here:
-    console.log('Uploading with filename:', filename);
+    // prepare payload
+    const payload = {
+      image:    warped.toDataURL('image/png'),
+      filename: filename
+    };
 
-    fetch('https://script.google.com/macros/s/AKfycby1eepW4cUzuvWjM_r61A848NLQmXI9PumEW0j6mxdPQgAmLelaQOZolrKkB83cx_b0/exec', {
-      method: 'POST',
+    // send via your CORS-proxy so the browser gets a proper Access-Control-Allow-Origin header
+    fetch('https://cors-proxy-uploader.onrender.com', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: warped.toDataURL('image/png'),
-        filename: filename
-      })
+      body:    JSON.stringify(payload)
     })
-    .then(res => res.json())
-    .then(result => {
-      alert('✅ Upload complete! File ID: ' + result.id);
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      alert('✅ Uploaded! File ID: ' + data.id);
+      console.log('Server response:', data);
     })
     .catch(err => {
       alert('❌ Upload failed: ' + err.message);
+      console.error(err);
     });
   }
 
