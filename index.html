@@ -214,8 +214,8 @@
       filename: filename
     };
 
-    // send via your CORS-proxy so the browser gets a proper Access-Control-Allow-Origin header
-    fetch('https://cors-proxy-uploader.onrender.com', {
+    // *** USE THE PROXY URL HERE, NOT the direct script.google.com URL ***
+    fetch('https://cors-proxy-uploader.onrender.com/upload', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload)
