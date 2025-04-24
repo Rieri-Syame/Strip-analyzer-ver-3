@@ -208,22 +208,22 @@
 
     // build a timestamp-safe filename
     const ts = new Date()
-      .toISOString()            // “2025-04-25T13:45:30.123Z”
-      .replace(/[:.]/g, '-')    // “2025-04-25T13-45-30-123Z”
-      .replace(/T/, '_')        // “2025-04-25_13-45-30-123Z”
-      .replace(/Z$/, '');       // “2025-04-25_13-45-30-123”
-
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .replace(/T/, '_')
+      .replace(/Z$/, '');
     const filename = `${name}_${ts}.png`;
 
-    const payload = {
-      image:  warped.toDataURL('image/png'),
-      filename: filename
-    };
+    // ← Insert the log here:
+    console.log('Uploading with filename:', filename);
 
-    fetch('https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycby1eepW4cUzuvWjM_r61A848NLQmXI9PumEW0j6mxdPQgAmLelaQOZolrKkB83cx_b0/exec', {
+    fetch('https://script.google.com/macros/s/AKfycby1eepW4cUzuvWjM_r61A848NLQmXI9PumEW0j6mxdPQgAmLelaQOZolrKkB83cx_b0/exec', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        image: warped.toDataURL('image/png'),
+        filename: filename
+      })
     })
     .then(res => res.json())
     .then(result => {
