@@ -200,21 +200,42 @@
     }
 
     function uploadToDrive() {
-      const name = document.getElementById('userNameInput').value.trim();
-      if (!name) { alert('Please enter your name'); return; }
-      const payload = { image: warped.toDataURL('image/png'), name };
-      const proxyUrl = 'https://cors-proxy-uploader.onrender.com/upload';
-      fetch(proxyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.text())
-      .then(data => alert('✅ Upload complete!'))
-      .catch(err => alert('❌ Upload failed: '+err.message));
+    const name = document.getElementById('userNameInput').value.trim();
+    if (!name) {
+      alert('Please enter your name');
+      return;
     }
 
-    document.getElementById('uploadBtn').addEventListener('click', uploadToDrive);
+    // build a timestamp-safe filename
+    const ts = new Date()
+      .toISOString()            // “2025-04-25T13:45:30.123Z”
+      .replace(/[:.]/g, '-')    // “2025-04-25T13-45-30-123Z”
+      .replace(/T/, '_')        // “2025-04-25_13-45-30-123Z”
+      .replace(/Z$/, '');       // “2025-04-25_13-45-30-123”
+
+    const filename = `${name}_${ts}.png`;
+
+    const payload = {
+      image:  warped.toDataURL('image/png'),
+      filename: filename
+    };
+
+    fetch('https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(result => {
+      alert('✅ Upload complete! File ID: ' + result.id);
+    })
+    .catch(err => {
+      alert('❌ Upload failed: ' + err.message);
+    });
+  }
+
+  document.getElementById('uploadBtn')
+          .addEventListener('click', uploadToDrive);
   </script>
 </body>
 </html>
