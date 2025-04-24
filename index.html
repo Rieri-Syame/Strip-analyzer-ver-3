@@ -3,7 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <title>Strip Analyzer</title>
-  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" onerror="document.getElementById('loading').textContent = '❌ Failed to load OpenCV.js';"></script>
+
+  <!-- 1) Define the OpenCV-ready callback up front -->
+  <script>
+    function onOpenCvReady() {
+      document.getElementById('loading').textContent = '✅ OpenCV.js loaded.';
+      document.getElementById('imageInput').disabled = false;
+      document.getElementById('uploadBtn').disabled = false;
+    }
+
+    // 2) Poll until cv.Mat exists, then fire the callback
+    (function waitForCV() {
+      if (window.cv && cv.Mat) {
+        onOpenCvReady();
+      } else {
+        setTimeout(waitForCV, 100);
+      }
+    })();
+  </script>
+
+  <!-- 3) Load your local or CDN copy of OpenCV.js -->
+  <!-- If you're serving a local file, keep it as "opencv.js" -->
+  <!-- Or swap in a specific CDN link such as https://docs.opencv.org/4.7.0/opencv.js -->
+  <script src="opencv.js"></script>
+
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .tabs { display:flex; border-bottom:1px solid #ccc; margin-bottom:10px; list-style:none; padding:0; }
