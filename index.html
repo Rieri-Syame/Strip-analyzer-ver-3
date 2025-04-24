@@ -136,23 +136,47 @@
     // ... analyzePads, saveLastImage, interpretColor ...
 
     function uploadToDrive() {
-      const name = document.getElementById('userNameInput').value.trim();
-      if (!name) { alert('Please enter your name'); return; }
-      const ts = new Date().toISOString().replace(/[:.]/g,'-').replace(/T/,'_').replace(/Z$/,'');
-      const filename = `${name}_${ts}.png`;
-      console.log('Uploading with filename:', filename);
-      const payload = { image: warped.toDataURL('image/png'), filename };
+  const name = document.getElementById('userNameInput').value.trim();
+  if (!name) {
+    alert('Please enter your name');
+    return;
+  }
 
-      // Correct proxy endpoint path:
-      fetch('https://cors-proxy-uploader.onrender.com/upload', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload)
-      })
-      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
-      .then(data => { alert('✅ Uploaded! File ID: ' + data.id); console.log('Server:', data); })
-      .catch(err => { alert('❌ Upload failed: ' + err.message); console.error(err); });
-    }
+  const ts = new Date().toISOString()
+    .replace(/[:.]/g,'-')
+    .replace(/T/,'_')
+    .replace(/Z$/,'');
+
+  const filename = `${name}_${ts}.png`;
+  console.log('Uploading with filename:', filename);
+
+  const payload = {
+    image:    warped.toDataURL('image/png'),
+    filename: filename
+  };
+
+  fetch('https://cors-proxy-uploader.onrender.com/upload', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload)
+  })
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+    console.log('Full upload response:', data);
+    // try a few common property names
+    const fileId = data.id || data.fileId || data.file_id 
+                || (data.result && data.result.id)
+                || 'unknown';
+    alert(`✅ Uploaded! File ID: ${fileId}`);
+  })
+  .catch(err => {
+    alert('❌ Upload failed: ' + err.message);
+    console.error(err);
+  });
+}
     document.getElementById('uploadBtn').addEventListener('click', uploadToDrive);
   </script>
 </body>
